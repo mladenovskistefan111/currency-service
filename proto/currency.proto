@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package hipstershop;
+
+service CurrencyService {
+  rpc GetSupportedCurrencies(Empty) returns (GetSupportedCurrenciesResponse) {}
+  rpc Convert(CurrencyConversionRequest) returns (Money) {}
+}
+
+message Empty {}
+
+message Money {
+  string currency_code = 1;
+  int64 units = 2;
+  int32 nanos = 3;
+}
+
+message GetSupportedCurrenciesResponse {
+  repeated string currency_codes = 1;
+}
+
+message CurrencyConversionRequest {
+  Money from = 1;
+  string to_code = 2;
+}
