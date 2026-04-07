@@ -4,6 +4,7 @@ import fs from 'fs';
 import * as grpc from '@grpc/grpc-js';
 import * as protoLoader from '@grpc/proto-loader';
 import { pino } from 'pino';
+import { convertMoney, type Money, type CurrencyData } from './currency';
 
 // ---------------------------------------------------------------------------
 // Logger
@@ -44,18 +45,10 @@ const healthProto = (loadProto(HEALTH_PROTO_PATH) as any).grpc.health.v1;
 // Types
 // ---------------------------------------------------------------------------
 
-interface Money {
-  currency_code: string;
-  units: number;
-  nanos: number;
-}
-
 interface CurrencyConversionRequest {
   from: Money;
   to_code: string;
 }
-
-type CurrencyData = Record<string, string>;
 
 // ---------------------------------------------------------------------------
 // Currency data
@@ -66,22 +59,6 @@ const CURRENCY_DATA_PATH = path.join(__dirname, '../data/currency_conversion.jso
 function getCurrencyData(): CurrencyData {
   const raw = fs.readFileSync(CURRENCY_DATA_PATH, 'utf-8');
   return JSON.parse(raw) as CurrencyData;
-}
-
-// ---------------------------------------------------------------------------
-// Core logic
-// ---------------------------------------------------------------------------
-
-/**
- * Normalises a Money amount so that nanos stays within [-999_999_999, 999_999_999]
- * and the whole units absorb any overflow.
- */
-function carry(amount: Money): Money {
-  const fractionSize = 1e9;
-  amount.nanos += (amount.units % 1) * fractionSize;
-  amount.units = Math.floor(amount.units) + Math.floor(amount.nanos / fractionSize);
-  amount.nanos = amount.nanos % fractionSize;
-  return amount;
 }
 
 // ---------------------------------------------------------------------------
@@ -101,7 +78,10 @@ function getSupportedCurrencies(
   } catch (err) {
     logger.error({ err }, 'Failed to get supported currencies');
     endMetrics(grpc.status.INTERNAL);
-    callback({ code: grpc.status.INTERNAL, message: 'Failed to load currency data' });
+    callback({
+      code: grpc.status.INTERNAL,
+      message: 'Failed to load currency data',
+    });
   }
 }
 
@@ -114,41 +94,17 @@ function convert(
     const data = getCurrencyData();
     const { from, to_code } = call.request;
 
-    if (!data[from.currency_code]) {
+    const result = convertMoney(from, to_code, data);
+
+    if (!result.ok) {
       endMetrics(grpc.status.INVALID_ARGUMENT);
-      callback({ code: grpc.status.INVALID_ARGUMENT, message: `Unknown source currency: ${from.currency_code}` });
+      callback({ code: grpc.status.INVALID_ARGUMENT, message: result.message });
       return;
     }
-    if (!data[to_code]) {
-      endMetrics(grpc.status.INVALID_ARGUMENT);
-      callback({ code: grpc.status.INVALID_ARGUMENT, message: `Unknown target currency: ${to_code}` });
-      return;
-    }
-
-    const fromRate = parseFloat(data[from.currency_code]);
-    const toRate = parseFloat(data[to_code]);
-
-    // Convert to EUR (base), then to target currency
-    const euros = carry({
-      currency_code: 'EUR',
-      units: from.units / fromRate,
-      nanos: from.nanos / fromRate,
-    });
-    euros.nanos = Math.round(euros.nanos);
-
-    const result = carry({
-      currency_code: to_code,
-      units: euros.units * toRate,
-      nanos: euros.nanos * toRate,
-    });
-
-    result.units = Math.floor(result.units);
-    result.nanos = Math.floor(result.nanos);
-    result.currency_code = to_code;
 
     logger.info({ from: from.currency_code, to: to_code }, 'Currency conversion successful');
     endMetrics(grpc.status.OK);
-    callback(null, result);
+    callback(null, result.value);
   } catch (err) {
     logger.error({ err }, 'Currency conversion failed');
     endMetrics(grpc.status.INTERNAL);
@@ -171,20 +127,19 @@ function main(): void {
   const port = process.env.PORT ?? '7000';
 
   const server = new grpc.Server();
-  server.addService(currencyProto.CurrencyService.service, { getSupportedCurrencies, convert });
+  server.addService(currencyProto.CurrencyService.service, {
+    getSupportedCurrencies,
+    convert,
+  });
   server.addService(healthProto.Health.service, { check });
 
-  server.bindAsync(
-    `[::]:${port}`,
-    grpc.ServerCredentials.createInsecure(),
-    (err, boundPort) => {
-      if (err) {
-        logger.error({ err }, 'Failed to bind gRPC server');
-        process.exit(1);
-      }
-      logger.info({ port: boundPort }, 'CurrencyService gRPC server started');
-    },
-  );
+  server.bindAsync(`[::]:${port}`, grpc.ServerCredentials.createInsecure(), (err, boundPort) => {
+    if (err) {
+      logger.error({ err }, 'Failed to bind gRPC server');
+      process.exit(1);
+    }
+    logger.info({ port: boundPort }, 'CurrencyService gRPC server started');
+  });
 }
 
 main();

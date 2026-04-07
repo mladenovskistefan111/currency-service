@@ -66,7 +66,5 @@ client.convert(conversionRequest, (err: Error | null, response: Money) => {
     logger.error({ err }, 'convert failed');
     return;
   }
-  logger.info(
-    `${moneyToString(conversionRequest.from)} → ${moneyToString(response)}`,
-  );
+  logger.info(`${moneyToString(conversionRequest.from)} → ${moneyToString(response)}`);
 });
