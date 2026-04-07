@@ -173,30 +173,27 @@ jobs:
   # ─── STAGE 4 ──────────────────────────────────────────────────────────────
 
   scan-image:
-      name: Scan Image for CVEs
-      runs-on: ubuntu-latest
-      needs: [build-and-stage]
-      permissions:
-        contents: read
-        packages: read
-      steps:
-        - uses: actions/checkout@v4         # ← add this
+    name: Scan Image for CVEs
+    runs-on: ubuntu-latest
+    needs: [build-and-stage]
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: Log in to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-        - name: Log in to ghcr.io
-          uses: docker/login-action@v3
-          with:
-            registry: ghcr.io
-            username: ${{ github.actor }}
-            password: ${{ secrets.GITHUB_TOKEN }}
-
-        - name: Run Trivy vulnerability scanner
-          uses: aquasecurity/trivy-action@v0.35.0
-          with:
-            image-ref: ${{ needs.build-and-stage.outputs.staged-image }}
-            format: table
-            severity: CRITICAL,HIGH
-            exit-code: 1
-            trivyignores: .trivyignore
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ needs.build-and-stage.outputs.staged-image }}
+          format: table
+          severity: CRITICAL,HIGH
+          exit-code: 1
 
   # ─── STAGE 5 ──────────────────────────────────────────────────────────────
 
@@ -305,7 +302,10 @@ jobs:
 
       - name: Smoke test - health check
         run: |
-          response=$(grpcurl -plaintext localhost:7000 grpc.health.v1.Health/Check)
+          response=$(grpcurl -plaintext \
+            -import-path ./proto \
+            -proto health.proto \
+            localhost:7000 grpc.health.v1.Health/Check)
           status=$(echo "$response" | grep -o '"status": "[^"]*"' | cut -d'"' -f4)
           if [ "$status" != "SERVING" ]; then
             echo "FAIL: expected SERVING, got '$status'"
@@ -315,7 +315,10 @@ jobs:
 
       - name: Smoke test - GetSupportedCurrencies returns data
         run: |
-          response=$(grpcurl -plaintext localhost:7000 hipstershop.CurrencyService/GetSupportedCurrencies)
+          response=$(grpcurl -plaintext \
+            -import-path ./proto \
+            -proto currency.proto \
+            localhost:7000 hipstershop.CurrencyService/GetSupportedCurrencies)
           if ! echo "$response" | grep -q '"EUR"'; then
             echo "FAIL: EUR not found in supported currencies"
             echo "$response"
