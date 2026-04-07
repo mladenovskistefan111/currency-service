@@ -188,12 +188,13 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.30.0
         with:
           image-ref: ${{ needs.build-and-stage.outputs.staged-image }}
           format: table
           severity: CRITICAL,HIGH
           exit-code: 1
+          trivyignores: .trivyignore
 
   # ─── STAGE 5 ──────────────────────────────────────────────────────────────
 
