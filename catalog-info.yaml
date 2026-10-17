@@ -12,6 +12,7 @@ metadata:
     backstage.io/kubernetes-label-selector: app.kubernetes.io/name=currency-service
     argocd/app-name: dev-currency-service
     grafana/dashboard-selector: "tags @> 'currency'"
+    grafana/alert-label-selector: "service=currency-service"
     grafana/overview-dashboard: "https://grafana.platform-demo.test/d/currency-service-overview"
   tags: [nodejs, typescript, grpc]
   links:
