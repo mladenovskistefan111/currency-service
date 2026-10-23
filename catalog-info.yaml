@@ -1,0 +1,43 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: currency-service
+  title: currency-service
+  description: "A gRPC service that converts monetary amounts between currencies for the platform-demo e-commerce platform."
+  annotations:
+    github.com/project-slug: platform-boutique/app-currency-service
+    backstage.io/source-location: url:https://github.com/platform-boutique/app-currency-service/tree/main/
+    backstage.io/techdocs-ref: dir:.
+    backstage.io/kubernetes-id: currency-service
+    backstage.io/kubernetes-namespace: platform-demo
+    backstage.io/kubernetes-label-selector: app.kubernetes.io/name=currency-service
+    argocd/app-name: dev-currency-service
+    grafana/dashboard-selector: "tags @> 'currency'"
+    grafana/alert-label-selector: "service=currency-service"
+    grafana/overview-dashboard: "https://grafana.platform-demo.test/d/currency-service-overview"
+  tags: [nodejs, typescript, grpc]
+  links:
+    - { url: "https://argocd.platform-demo.test/applications/argocd/dev-currency-service", title: Argo CD, icon: dashboard }
+    - { url: "https://grafana.platform-demo.test/d/currency-service-overview", title: Grafana dashboard, icon: dashboard }
+spec:
+  type: service
+  lifecycle: experimental
+  owner: group:default/maintainers
+  system: shop
+  providesApis: [currency-service-api]
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: currency-service-api
+  description: gRPC interface of currency-service (Protocol Buffers).
+  tags: [grpc, protobuf]
+  links:
+    - { url: "https://github.com/platform-boutique/app-currency-service/blob/main/proto/currency.proto", title: "currency.proto on GitHub", icon: code }
+spec:
+  type: grpc
+  lifecycle: experimental
+  owner: group:default/maintainers
+  system: shop
+  definition:
+    $text: ./proto/currency.proto
