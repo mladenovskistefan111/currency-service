@@ -42,8 +42,8 @@ flowchart LR
 ## Find it elsewhere
 
 <div class="pd-cards" markdown>
-<div><h4><a href="https://argocd.platform-demo.test/applications/argocd/dev-currency-service">Argo CD</a></h4><p>Sync and health of <code>dev-currency-service</code>.</p></div>
-<div><h4><a href="https://grafana.platform-demo.test/d/currency-service-overview">Grafana</a></h4><p>Latency, traffic and errors (<code>currency-service-overview</code>).</p></div>
+<div><h4><a href="https://argocd.platform-demo.click/applications/argocd/dev-currency-service">Argo CD</a></h4><p>Sync and health of <code>dev-currency-service</code>.</p></div>
+<div><h4><a href="https://grafana.platform-demo.click/d/currency-service-overview">Grafana</a></h4><p>Latency, traffic and errors (<code>currency-service-overview</code>).</p></div>
 <div><h4><a href="https://github.com/platform-boutique/app-currency-service">Repository</a></h4><p>Source, pull requests and releases of <code>app-currency-service</code>.</p></div>
 </div>
 
